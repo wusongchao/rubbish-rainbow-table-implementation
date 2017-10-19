@@ -123,9 +123,9 @@ utils.cpp(662): warning C4996: 'fopen': This function or variable may be unsafe.
 utils.cpp(686): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
 utils.cpp(746): warning C4018: “<”: 有符号/无符号不匹配
   正在生成代码
-  1 of 139 functions ( 0.7%) were compiled, the rest were copied from previous compilation.
+  0 of 139 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   已完成代码的生成
   crack.vcxproj -> H:\code\cuda\kernelV3\x64\Release\crack.exe
   crack.vcxproj -> H:\code\cuda\kernelV3\x64\Release\crack.pdb (Full PDB)

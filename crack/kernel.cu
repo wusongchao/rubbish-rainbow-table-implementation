@@ -645,14 +645,14 @@ __global__ void calIndexFromSpecificPos(struct DecryptedInfo* decryptedInfo, uns
 			hash[i] = hashSource[i];
 		}
 
-		ulong indexS = hashToIndex(hash, 0);
+		ulong indexS;
 		(decryptedInfo + offset)->pos = offset;
 		
-		for (int j = offset + 1;j < chainLength;j++) {
+		for (int j = offset;j < chainLength;j++) {
 		//	plainToHashWithInlinePTX(indexS, plainLength, hash, plainCharSetSize);
 		//	//plainToHashWithInlinePTX((char*)&indexS, INDEX_SIZE_IN_BYTES, hash);
-			plainToHash(indexS, plainLength, hash, plainCharSetSize);
 			indexS = hashToIndex(hash, j);
+			plainToHash(indexS, plainLength, hash, plainCharSetSize);
 		//	//indexS = hashToIndexPaperVersion(hash, i, plainCharSetSize);
 		}
 		(decryptedInfo + offset)->index = reductFinalIndex(indexS,plainLength,plainCharSetSize);
