@@ -3,6 +3,7 @@
 #include "math_functions.h"
 #include "round.cuh"
 
+#include <cmath>
 #include <stdio.h>
 #include <curand_kernel.h>
 #include "utils.h"
@@ -10,10 +11,13 @@
 #include <thrust\sort.h>
 #include <map>
 #include <string>
+#include <sstream>
 
 //#pragma comment(lib, "curand.lib")
 
 using std::map;
+using std::string;
+using std::stringstream;
 
 #define INDEX_SIZE_IN_BYTES 8
 #define EXTRACT_9 0x7fffffffffffffff
@@ -108,12 +112,49 @@ struct ChainComparator {
 	}
 };
 
-__device__ void indexToPlain(ulong index, size_t plainCharsetSize,
-	size_t plainLength, char* plain)
+struct HashCompartor {
+	__host__ __device__
+		bool operator()(const struct PasswordMapping& lhs, const struct PasswordMapping& rhs) {
+		//const ulong* lhsP = (const ulong*)lhs.hash;
+		//const ulong* rhsP = (const ulong*)rhs.hash;
+		//ulong lhs4 = *(lhsP + 3);
+		//ulong lhs3 = *(lhsP + 2);
+		//ulong lhs2 = *(lhsP + 1);
+		//ulong lhs1 = *(lhsP);
+		//ulong rhs4 = *(rhsP + 3);
+		//ulong rhs3 = *(rhsP + 2);
+		//ulong rhs2 = *(rhsP + 1);
+		//ulong rhs1 = *(rhsP);
+		//return lhs1 < rhs1
+		//	|| lhs1 == rhs1 && lhs2 < rhs2
+		//	|| lhs1 == rhs1 && lhs2 == rhs2 && lhs3 < rhs3
+		//	|| lhs1 == rhs1 && lhs2 == rhs2 && lhs3 == rhs3 && lhs4 < rhs4;
+		bool flap = true;
+		for (int i = 0; i < 32; i++) {
+			if (lhs.hash[i] > rhs.hash[i]) {
+				flap = false;
+				break;
+			}
+		}
+		if (flap) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+};
+
+void QSort(struct PasswordMapping* mappings, uint32_t CHAINS_SIZE) {
+	thrust::device_ptr<struct PasswordMapping> thrustChainP(mappings);
+	thrust::sort(thrustChainP, thrustChainP + CHAINS_SIZE, HashCompartor());
+}
+
+__device__ void indexToPlain(ulong index, const uint8_t plainLength,
+	const uint8_t plainCharsetSize, char* plain)
 {
-	char * plainCharSetP = plainCharSet[threadIdx.x];
-	for (size_t i = 0;i < plainLength;i++) {
-		plain[i] = plainCharSetP[index % plainCharsetSize];
+	for (int i = plainLength - 1;i >= 0;i--) {
+		plain[i] = index % plainCharsetSize;
 		index /= plainCharsetSize;
 	}
 }
@@ -191,107 +232,7 @@ __device__ inline ulong hashToIndexWithoutCharSet(unsigned char* hash, int pos, 
 	return index;
 }
 
-
-//__device__ inline void plainToHash(char* plain, const size_t length, unsigned char* res)
-//{
-//	unsigned int bitlen0 = 0;
-//	unsigned int bitlen1 = 0;
-//	//unsigned int stateP[8];
-//
-//	unsigned char data[64];
-//
-//	unsigned int l;
-//
-//	for (l = 0; l < length; ++l) {
-//		data[l] = plain[l];
-//	}
-//
-//	uint* stateP = state[threadIdx.x];
-//
-//	stateP[0] = 0x6a09e667;
-//	stateP[1] = 0xbb67ae85;
-//	stateP[2] = 0x3c6ef372;
-//	stateP[3] = 0xa54ff53a;
-//	stateP[4] = 0x510e527f;
-//	stateP[5] = 0x9b05688c;
-//	stateP[6] = 0x1f83d9ab;
-//	stateP[7] = 0x5be0cd19;
-//
-//
-//	// Pad whatever data is left in the buffer. 
-//	data[l++] = 0x80;
-//	while (l < 56)
-//		data[l++] = 0x00;
-//
-//
-//	// Append to the padding the total message's length in bits and transform. 
-//	DBL_INT_ADD(bitlen0, bitlen1, length * 8);
-//	data[63] = bitlen0;
-//	data[62] = bitlen0 >> 8;
-//	data[61] = bitlen0 >> 16;
-//	data[60] = bitlen0 >> 24;
-//	data[59] = bitlen1;
-//	data[58] = bitlen1 >> 8;
-//	data[57] = bitlen1 >> 16;
-//	data[56] = bitlen1 >> 24;
-//
-//	unsigned int a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
-//
-//	for (i = 0, j = 0; i < 16; ++i, j += 4)
-//		m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
-//	for (; i < 64; ++i)
-//		m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
-//
-//	a = stateP[0];
-//	b = stateP[1];
-//	c = stateP[2];
-//	d = stateP[3];
-//	e = stateP[4];
-//	f = stateP[5];
-//	g = stateP[6];
-//	h = stateP[7];
-//
-//	for (i = 0; i < 64; ++i) {
-//		t1 = h + EP1(e) + CH(e, f, g) + k[i] + m[i];
-//		t2 = EP0(a) + MAJ(a, b, c);
-//		h = g;
-//		g = f;
-//		f = e;
-//		e = d + t1;
-//		d = c;
-//		c = b;
-//		b = a;
-//		a = t1 + t2;
-//	}
-//
-//	stateP[0] += a;
-//	stateP[1] += b;
-//	stateP[2] += c;
-//	stateP[3] += d;
-//	stateP[4] += e;
-//	stateP[5] += f;
-//	stateP[6] += g;
-//	stateP[7] += h;
-//
-//	// Since this implementation uses little endian byte ordering and SHA uses big endian,
-//	// reverse all the bytes when copying the final state to the output hash. 
-//
-//	for (i = 0; i < 4; ++i) {
-//		l = i << 3;
-//		*(res) = (stateP[0] >> (24 - l)) & 0x000000ff;
-//		*(res + 4) = (stateP[1] >> (24 - l)) & 0x000000ff;
-//		*(res + 8) = (stateP[2] >> (24 - l)) & 0x000000ff;
-//		*(res + 12) = (stateP[3] >> (24 - l)) & 0x000000ff;
-//		*(res + 16) = (stateP[4] >> (24 - l)) & 0x000000ff;
-//		*(res + 20) = (stateP[5] >> (24 - l)) & 0x000000ff;
-//		*(res + 24) = (stateP[6] >> (24 - l)) & 0x000000ff;
-//		*(res + 28) = (stateP[7] >> (24 - l)) & 0x000000ff;
-//		++res;
-//	}
-//}
-
-
-__device__ inline void plainToHashWithInlinePTX(char* plain, const unsigned int length, unsigned char* res) {
+__device__ inline void plainToHashWithInlinePTX(const char* plain, const uint8_t length, unsigned char* res) {
 	unsigned int bitlen0 = 0;
 	unsigned int bitlen1 = 0;
 	unsigned int stateP[8];
@@ -466,11 +407,12 @@ __device__ inline void plainToHashWithInlinePTX(ulong index, const uint8_t lengt
 
 	unsigned int l;
 
+	// reduct the index in the plain space
 	for (l = length - 1; l >= 1; l--) {
-		data[l] = (index & 0x7f) % charSetSize;
+		data[l] = (index & 0x7f) % charSetSize + 32;
 		index >>= 7;
 	}
-	data[0] = (index & 0x7f) % charSetSize;
+	data[0] = (index & 0x7f) % charSetSize + 32;
 	l = length;
 
 	stateP[0] = 0x6a09e667;
@@ -821,7 +763,13 @@ __device__ inline void initSHA256ConstantAndCharSet(const unsigned int charSetSi
 	}
 }
 
-__device__ inline ulong hashToIndex(unsigned char* hash, int pos)
+__device__ inline ulong hashToIndex(unsigned char* hash, int pos, ulong plainSpace)
+{
+	ulong* hashP = (ulong*)hash;
+	return (ulong)((*(hashP)+ pos)) % plainSpace;
+}
+
+__device__ ulong hashToIndex(unsigned char* hash, int pos)
 {
 	ulong* hashP = (ulong*)hash;
 	return (ulong)(((*(hashP) ^ *(hashP + 1) ^ *(hashP + 2) ^ *(hashP + 3)) + pos));
@@ -832,7 +780,8 @@ __device__ inline ulong reductFinalIndex(ulong index, uint8_t plainLength, uint8
 	ulong res = 0;
 	uint8_t plainIndex[9];
 	for (int l = plainLength - 1; l >= 0; l--) {
-		plainIndex[l] = ((uint8_t)(index & 0x7f)) % plainCharSize;
+		// 32 - 126
+		plainIndex[l] = ((uint8_t)(index & 0x7f)) % plainCharSize + 32;
 		index >>= 7;
 	}
 	int j;
@@ -851,6 +800,8 @@ __global__ void generateChainPaperVersion(struct Chain* chains, const uint8_t pl
 
 	unsigned char hash[32];
 
+	char plain[8];
+
 	uint offset = (blockIdx.x * blockDim.x) + threadIdx.x;
 
 	struct Chain* chain;
@@ -866,18 +817,160 @@ __global__ void generateChainPaperVersion(struct Chain* chains, const uint8_t pl
 		indexE = hashToIndex(hash, i);
 	}
 	chain->indexE = reductFinalIndex(indexE,plainLength,plainCharSetSize);
+	
+
+	//for (int i = 0;i < chainLength;i++) {
+	//	indexToPlain(indexE, plainLength, plainCharSetSize, plain);
+	//	plainToHashWithInlinePTX(plain, plainLength, hash);
+	//	hashToIndex(hash, i);
 	//}
 }
 
-int main()
+__global__ void generateChainPaperVersion(struct Chain* chains, const uint8_t plainCharSetSize,
+	const uint8_t plainLength, const unsigned int chainLength, ulong plainSpace)
 {
-	const uint CHAINS_SIZE = 7680000;
-	int plainLength = 6;
-	int chainLength = 100000;
+	//initSHA256ConstantAndCharSet(plainCharSetSize);
 
-	int plainCharSetSize = 95;
+	unsigned char hash[32];
 
-	//cudaSetDeviceFlags(cudaDeviceMapHost);
+	char plain[8];
+
+	uint offset = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+	struct Chain* chain;
+
+	chain = chains + offset;
+
+	ulong indexE = chain->indexS;
+
+	//for (int i = 0;i < chainLength;i++) {
+	//	//plainToHashWithInlinePTX((char *)&indexE, INDEX_SIZE_IN_BYTES, hash);
+	//	plainToHashWithInlinePTX(indexE, plainLength, hash, plainCharSetSize);
+	//	//indexE = hashToIndexWithoutCharSet(hash, i, plainCharSetSize);
+	//	indexE = hashToIndex(hash, i, 0x0fffffff);
+	//}
+	//chain->indexE = reductFinalIndex(indexE,plainLength,plainCharSetSize);
+	//}
+
+	for (int i = 0;i < chainLength;i++) {
+		indexToPlain(indexE, plainLength, plainCharSetSize, plain);
+		plainToHashWithInlinePTX(plain, plainLength, hash);
+		indexE = hashToIndex(hash, i, plainSpace);
+	}
+
+	chain->indexE = indexE;
+}
+
+__global__ void generateChain(struct PasswordMapping* chains, const uint8_t plainCharSetSize)
+{
+	uint32_t offset = (blockIdx.x * blockDim.x) + threadIdx.x;
+	if (offset < plainCharSetSize) {
+		struct PasswordMapping* chain = chains + offset;
+		plainToHash(chain->plain, 1, chain->hash);
+	}else if (offset < plainCharSetSize + plainCharSetSize * plainCharSetSize) {
+		struct PasswordMapping* chain = chains + offset;
+		plainToHash(chain->plain, 2, chain->hash);
+	}else if (offset < plainCharSetSize + plainCharSetSize * plainCharSetSize + plainCharSetSize * plainCharSetSize * plainCharSetSize) {
+		struct PasswordMapping* chain = chains + offset;
+		plainToHash(chain->plain, 3, chain->hash);
+	}
+}
+
+void generateTableWhilePasswordLengthLowerOrEqualThan3(const char* hostCharSetPath , const uint8_t plainCharSetSize)
+{
+	const uint32_t CHAINS_SIZE = plainCharSetSize + plainCharSetSize * plainCharSetSize + plainCharSetSize * plainCharSetSize * plainCharSetSize;
+	struct PasswordMapping* deviceChains;
+	struct PasswordMapping* hostChains;
+	char* hostCharSet;
+	CUDA_CALL(cudaHostAlloc(&hostChains, CHAINS_SIZE * sizeof(struct PasswordMapping), cudaHostAllocDefault));
+	CUDA_CALL(cudaHostAlloc(&hostCharSet, plainCharSetSize * sizeof(char), cudaHostAllocDefault));
+	getCharSet(hostCharSet, hostCharSetPath, plainCharSetSize);
+	
+	generateInitialIndex(hostChains, hostCharSet, plainCharSetSize);
+
+	CUDA_CALL(cudaMalloc(&deviceChains, CHAINS_SIZE * sizeof(struct PasswordMapping)));
+	CUDA_CALL(cudaMemcpy(deviceChains, hostChains, CHAINS_SIZE * sizeof(struct PasswordMapping), cudaMemcpyHostToDevice));
+
+	uint32_t threadPerBlock = 384;
+	uint32_t blockNum = CHAINS_SIZE / threadPerBlock + 1;
+	
+	cudaEvent_t startEvent;
+	cudaEvent_t endEvent;
+	float cudaElapsedTime = 0.0f;
+	cudaEventCreate(&startEvent);
+	cudaEventCreate(&endEvent);
+	cudaEventRecord(startEvent, 0);
+
+	generateChain<<<blockNum, threadPerBlock>>>(deviceChains, plainCharSetSize);
+
+	cudaEventRecord(endEvent, 0);
+	cudaEventSynchronize(endEvent);
+	cudaEventElapsedTime(&cudaElapsedTime, startEvent, endEvent);
+
+	QSort(deviceChains, CHAINS_SIZE);
+
+	CUDA_CALL(cudaMemcpy(hostChains, deviceChains, CHAINS_SIZE * sizeof(struct PasswordMapping), cudaMemcpyDeviceToHost));
+	
+	writeToFile((string("../") + "1-3#" + "ascii-32-95#" + "1").c_str(), hostChains, sizeof(struct PasswordMapping), CHAINS_SIZE);
+
+	cudaFreeHost(hostChains);
+	cudaFreeHost(hostCharSet);
+	cudaFree(deviceChains);
+	//cudaEventDestroy(startEvent);
+	//cudaEventDestroy(endEvent);
+
+	cudaDeviceReset();
+
+	printf("%.3lf MH/S", (CHAINS_SIZE) / (cudaElapsedTime * 1000.0));
+}
+
+//int main()
+//{
+//	generateTableWhilePasswordLengthLowerOrEqualThan3("../charsets/ascii-32-95.txt", 95);
+//
+//	//constexpr uint32_t CHAINS_SIZE = 95 + 95 * 95 + 95 * 95 * 95;
+//	//struct PasswordMapping* mappings;
+//	//cudaHostAlloc(&mappings, sizeof(struct PasswordMapping) * CHAINS_SIZE, cudaHostAllocDefault);
+//	//openTableFile((string("../") + "1-3#" + "ascii-32-95#" + "1").c_str(), mappings, sizeof(struct PasswordMapping), CHAINS_SIZE);
+//	//for (int i = 0;i < CHAINS_SIZE;i++) {
+//	//	printf("%s\n", mappings[i].hash);
+//	//}
+//	//getchar();
+//
+//	return 0;
+//}
+
+void generateTable(const uint8_t plainLength, const char* hostCharSetPath, const uint8_t plainCharSetSize)
+{
+	// chainSize = blockNum * threadPerBlock
+	// cover = chainSize * chainLength
+	const uint32_t threadPerBlock = 384;
+	uint32_t blockNum = 0;
+
+	uint32_t CHAINS_SIZE = 0;
+	uint32_t chainLength = 0;
+	// default plainCharSetSize == 95
+	// strategy
+	switch (plainLength) {
+	// the collision ration is quite high, especially when the plainLength is low
+	// the paper's reductant version is better when the plainLength is low (4,5,6)
+	// must split the table , even when the table size is low
+	case 4:
+		chainLength = 350;
+		CHAINS_SIZE = 384000;
+		blockNum = 1000;
+		break;
+	case 5:
+		chainLength = 3600;
+		CHAINS_SIZE = 2304000;
+		blockNum = 6000;
+		break;
+	case 6:
+		chainLength = 60000;
+		CHAINS_SIZE = 15360000;
+		blockNum = 40000;
+	}
+
 	struct Chain* devicePointer;
 	struct Chain* hostPointer;
 	char* hostCharSet;
@@ -886,31 +979,22 @@ int main()
 	//CUDA_CALL(cudaHostAlloc(&hostCharSet, 36 * sizeof(char), cudaHostAllocDefault | cudaHostAllocMapped));
 	CUDA_CALL(cudaHostAlloc(&hostPointer, CHAINS_SIZE * sizeof(struct Chain), cudaHostAllocDefault));
 	CUDA_CALL(cudaHostAlloc(&hostCharSet, plainCharSetSize * sizeof(char), cudaHostAllocDefault));
-
-	getCharSet(hostCharSet, "../charsets/ascii-32-95.txt", plainCharSetSize);
-
+	
+	getCharSet(hostCharSet, hostCharSetPath, plainCharSetSize);
+	
 	generateInitialIndex(hostPointer, CHAINS_SIZE);
-
+	
 	//printf("%llu", hostPointer[0].indexS);
-
+	
 	CUDA_CALL(cudaMalloc(&devicePointer, CHAINS_SIZE * sizeof(struct Chain)));
 	CUDA_CALL(cudaMalloc(&deviceCharSet, plainCharSetSize * sizeof(char)));
-
+	
 	CUDA_CALL(cudaMemcpy(deviceCharSet, hostCharSet, plainCharSetSize * sizeof(char), cudaMemcpyHostToDevice));
 	CUDA_CALL(cudaMemcpy(devicePointer, hostPointer, CHAINS_SIZE * sizeof(struct Chain), cudaMemcpyHostToDevice));
-
-	CUDA_CALL(cudaMemcpyToSymbol(constantAreaPlainCharSet, hostCharSet, sizeof(char) * plainCharSetSize));
-
-	/*curandGenerator_t randGeneratorDevice;
-	const ulong seed = 987654321;
-	const curandRngType_t generatorType = CURAND_RNG_PSEUDO_DEFAULT;
-
-	curandCreateGenerator(&randGeneratorDevice, generatorType);
-	curandSetPseudoRandomGeneratorSeed(randGeneratorDevice, seed);
-	curandGenerateLongLong(randGeneratorDevice, (ulong *)devicePointer, CHAINS_SIZE * 2);*/
-
-	int threadPerBlock = 384;
-	uint blockNum = CHAINS_SIZE / threadPerBlock;
+	
+	//CUDA_CALL(cudaMemcpyToSymbol(constantAreaPlainCharSet, hostCharSet, sizeof(char) * plainCharSetSize));
+	
+	ulong plainSpace = pow(plainCharSetSize, plainLength);
 
 	cudaEvent_t startEvent;
 	cudaEvent_t endEvent;
@@ -918,20 +1002,26 @@ int main()
 	cudaEventCreate(&startEvent);
 	cudaEventCreate(&endEvent);
 	cudaEventRecord(startEvent, 0);
-
+	
 	generateChainPaperVersion << <blockNum, threadPerBlock >> > (devicePointer, plainCharSetSize, plainLength, chainLength);
-
+	
 	cudaEventRecord(endEvent, 0);
 	cudaEventSynchronize(endEvent);
 	cudaEventElapsedTime(&cudaElapsedTime, startEvent, endEvent);
-
+	
 	thrust::device_ptr<struct Chain> thrustChainP(devicePointer);
 	thrust::sort(thrustChainP, thrustChainP + CHAINS_SIZE, ChainComparator());
+	
+	
 
 	CUDA_CALL(cudaMemcpy(hostPointer, devicePointer, CHAINS_SIZE * sizeof(struct Chain), cudaMemcpyDeviceToHost));
 
-	writeToFile("../t5.rt", hostPointer, sizeof(struct Chain), CHAINS_SIZE);
+	struct Chain* forWrite;
+	CUDA_CALL(cudaHostAlloc(&forWrite, sizeof(struct Chain) * CHAINS_SIZE, cudaHostAllocDefault));
+	uint32_t actualSize = removeDuplicate(forWrite, hostPointer, CHAINS_SIZE);
 
+	writeToFile(fileNameBuilder("../", plainLength, hostCharSetPath, 1, actualSize, chainLength).c_str(), forWrite, sizeof(struct Chain), actualSize);
+	//writeToFile("../5#ascii-32-95#1#384000#350", hostPointer, sizeof(struct Chain), CHAINS_SIZE);
 
 	cudaFreeHost(hostPointer);
 	cudaFreeHost(hostCharSet);
@@ -939,14 +1029,100 @@ int main()
 	cudaFree(devicePointer);
 	//cudaEventDestroy(startEvent);
 	//cudaEventDestroy(endEvent);
-
+	
 	cudaDeviceReset();
-
+	
 	printf("%.3lf MH/S", (CHAINS_SIZE * (ulong)chainLength) / (cudaElapsedTime * 1000.0));
+}
 
-	getchar();
-
-
-
+int main()
+{
+	generateTable(4, "../charsets/ascii-32-95.txt", 95);
 	return 0;
 }
+
+//int main(int argc, char *argv[])
+//{
+//	const uint CHAINS_SIZE = 7680000;
+//	int plainLength = 4;
+//	int chainLength = 100000;
+//
+//	int plainCharSetSize = 95;
+//
+//	//cudaSetDeviceFlags(cudaDeviceMapHost);
+//	struct Chain* devicePointer;
+//	struct Chain* hostPointer;
+//	char* hostCharSet;
+//	char* deviceCharSet;
+//	//CUDA_CALL(cudaHostAlloc(&hostPointer, CHAINS_SIZE * sizeof(struct Chain), cudaHostAllocDefault | cudaHostAllocMapped));
+//	//CUDA_CALL(cudaHostAlloc(&hostCharSet, 36 * sizeof(char), cudaHostAllocDefault | cudaHostAllocMapped));
+//	CUDA_CALL(cudaHostAlloc(&hostPointer, CHAINS_SIZE * sizeof(struct Chain), cudaHostAllocDefault));
+//	CUDA_CALL(cudaHostAlloc(&hostCharSet, plainCharSetSize * sizeof(char), cudaHostAllocDefault));
+//
+//	getCharSet(hostCharSet, "../charsets/ascii-32-95.txt", plainCharSetSize);
+//
+//	generateInitialIndex(hostPointer, CHAINS_SIZE);
+//
+//	//printf("%llu", hostPointer[0].indexS);
+//
+//	CUDA_CALL(cudaMalloc(&devicePointer, CHAINS_SIZE * sizeof(struct Chain)));
+//	CUDA_CALL(cudaMalloc(&deviceCharSet, plainCharSetSize * sizeof(char)));
+//
+//	CUDA_CALL(cudaMemcpy(deviceCharSet, hostCharSet, plainCharSetSize * sizeof(char), cudaMemcpyHostToDevice));
+//	CUDA_CALL(cudaMemcpy(devicePointer, hostPointer, CHAINS_SIZE * sizeof(struct Chain), cudaMemcpyHostToDevice));
+//
+//	CUDA_CALL(cudaMemcpyToSymbol(constantAreaPlainCharSet, hostCharSet, sizeof(char) * plainCharSetSize));
+//
+//	/*curandGenerator_t randGeneratorDevice;
+//	const ulong seed = 987654321;
+//	const curandRngType_t generatorType = CURAND_RNG_PSEUDO_DEFAULT;
+//
+//	curandCreateGenerator(&randGeneratorDevice, generatorType);
+//	curandSetPseudoRandomGeneratorSeed(randGeneratorDevice, seed);
+//	curandGenerateLongLong(randGeneratorDevice, (ulong *)devicePointer, CHAINS_SIZE * 2);*/
+//
+//	int threadPerBlock = 384;
+//	uint blockNum = CHAINS_SIZE / threadPerBlock;
+//
+//	cudaEvent_t startEvent;
+//	cudaEvent_t endEvent;
+//	float cudaElapsedTime = 0.0f;
+//	cudaEventCreate(&startEvent);
+//	cudaEventCreate(&endEvent);
+//	cudaEventRecord(startEvent, 0);
+//
+//	generateChainPaperVersion << <blockNum, threadPerBlock >> > (devicePointer, plainCharSetSize, plainLength, chainLength);
+//
+//	cudaEventRecord(endEvent, 0);
+//	cudaEventSynchronize(endEvent);
+//	cudaEventElapsedTime(&cudaElapsedTime, startEvent, endEvent);
+//
+//	thrust::device_ptr<struct Chain> thrustChainP(devicePointer);
+//	thrust::sort(thrustChainP, thrustChainP + CHAINS_SIZE, ChainComparator());
+//
+//	CUDA_CALL(cudaMemcpy(hostPointer, devicePointer, CHAINS_SIZE * sizeof(struct Chain), cudaMemcpyDeviceToHost));
+//
+//	// plainLength#charSet#table#tableLength#chainLength
+//
+//	// 1-3#ascii-32-95#1#0#chainLength
+//	//writeToFile((string("../") + "1-3#" + "ascii-32-95#" + "1#" + "0#" + ).c_str(), hostPointer, sizeof(struct Chain), CHAINS_SIZE);
+//	writeToFile("../t5.rt", hostPointer, sizeof(struct Chain), CHAINS_SIZE);
+//
+//
+//	cudaFreeHost(hostPointer);
+//	cudaFreeHost(hostCharSet);
+//	cudaFree(deviceCharSet);
+//	cudaFree(devicePointer);
+//	//cudaEventDestroy(startEvent);
+//	//cudaEventDestroy(endEvent);
+//
+//	cudaDeviceReset();
+//
+//	printf("%.3lf MH/S", (CHAINS_SIZE * (ulong)chainLength) / (cudaElapsedTime * 1000.0));
+//
+//	getchar();
+//
+//
+//
+//	return 0;
+//}

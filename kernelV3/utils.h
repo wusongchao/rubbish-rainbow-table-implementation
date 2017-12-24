@@ -1,9 +1,12 @@
+#pragma once
+
 #include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <random>
 #include <math.h>
+#include <sstream>
 
 #define uchar unsigned char // 8-bit byte
 #define uint unsigned int // 32-bit word
@@ -31,10 +34,16 @@
 
 
 using std::string;
+using std::stringstream;
 
 __declspec(align(16)) struct Chain {
 	ulong indexS;
 	ulong indexE;
+};
+
+struct PasswordMapping {
+	char plain[4];
+	unsigned char hash[32];
 };
 
 //inline void mySHA256Implement(char * str, size_t length, unsigned char * res);
@@ -142,6 +151,16 @@ void writeToFile(const char* filePath, const void* buffer, size_t elementSize, s
 
 void generateInitialIndex(struct Chain* chains, size_t chainsSize);
 
+void generateInitialIndex(struct PasswordMapping * chains, const char* plainCharSet, const uint8_t plainCharSetSize);
+
 void openTableFile(const char* filePath,void* buffer, size_t elementSize, size_t bufferSize);
 
+//void processCommandInstructionBeforeGeneration(int argc, const char *argv[], int* passwordLength, char* charSetPath, char* tablePath);
 
+void hashTransfer(const char* src, unsigned char hash[]);
+
+// plainLength#charSet#table#tableLength#chainLength
+string fileNameBuilder(const char* parentPath, const uint32_t plainLength, const char* plainCharSetPath, const uint32_t tableIndex, const uint32_t chainSize, const uint32_t chainLength);
+
+uint32_t removeDuplicate(struct Chain* dest, struct Chain* src, uint32_t chainsSize);
+//int compareHash(const unsigned char * lhs, const unsigned char * rhs);

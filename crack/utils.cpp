@@ -109,14 +109,14 @@ void PrintHash(uchar* Hash)
 //	m_nIndex = (uint64)(*(uint64*)m_Hash + m_nReduceOffset + nPos) % m_nPlainSpaceTotal;
 //}
 //
-void indexToPlainCPU(ulong index, size_t plainCharsetSize, const char* plainCharset,
-	size_t plainLength, char* plain)
-{
-	for (size_t i = 0;i < plainLength;i++) {
-		plain[i] = plainCharset[index % plainCharsetSize];
-		index /= plainCharsetSize;
-	}
-}
+//void indexToPlainCPU(ulong index, size_t plainCharsetSize, const char* plainCharset,
+//	size_t plainLength, char* plain)
+//{
+//	for (size_t i = 0;i < plainLength;i++) {
+//		plain[i] = plainCharset[index % plainCharsetSize];
+//		index /= plainCharsetSize;
+//	}
+//}
 //
 void plainToHashCPU(const char* plain, const uint8_t length, unsigned char* res)
 {
@@ -338,7 +338,7 @@ void plainToHashCPU(ulong index, const uint8_t length, unsigned char* res, const
 	//}
 
 	for (int i = length - 1; i >= 0; i--) {
-		data[i] = ((uint8_t)(index & 0x7f)) % charSetSize;
+		data[i] = ((uint8_t)(index & 0x7f)) % charSetSize + 32;
 		index >>= 7;
 	}
 
@@ -540,7 +540,8 @@ void plainToHashCPU(ulong index, const uint8_t length, unsigned char* res, const
 void indexToPlainCPU(ulong index, char* plain, const uint8_t plainLength, const char* charSet, const uint32_t charSetSize)
 {
 	for (int i = plainLength - 1; i >= 0; i--) {
-		plain[i] = charSet[(index & 0x7f) % charSetSize];
+		//plain[i] = charSet[(index & 0x7f) % charSetSize];
+		plain[i] = (index & 0x7f) + 32;
 		index >>= 7;
 	}
 }
@@ -680,6 +681,41 @@ bool compareHash(const unsigned char * lhs, const unsigned char * rhs)
 	return false;
 }
 
+int compareHash_(const unsigned char * lhs, const unsigned char * rhs)
+{
+	//const ulong* lhsP = (const ulong *)lhs;
+	//const ulong* rhsP = (const ulong *)rhs;
+	///*
+	//*(rhsP + 1 2 3 )
+	//*/
+	//if (*lhsP == *rhsP
+	//	&& *(lhsP + 1) == *(rhsP + 1)
+	//	&& *(lhsP + 2) == *(rhsP + 2)
+	//	&& *(lhsP + 3) == *(rhsP + 3)) {
+	//	return 0;
+	//}
+	//if (*lhsP > *rhsP
+	//	|| *lhsP == *rhsP && *(lhsP + 1) > *(rhsP + 1)
+	//	|| *lhsP == *rhsP && *(lhsP + 1) == *(rhsP + 1) && *(lhsP + 2) > *(rhsP + 2)
+	//	|| *lhsP == *rhsP && *(lhsP + 1) == *(rhsP + 1) && *(lhsP + 2) == *(rhsP + 2) && *(lhsP + 3) > *(rhsP + 3)) {
+	//	return 1;
+	//}
+	//return -1;
+	int flap = 0;
+	for (int i = 0;i < 32;i++) {
+		if (lhs[i] == rhs[i]) {
+			continue;
+		}else if (lhs[i] < rhs[i]){
+			flap = -1;
+			break;
+		}else {
+			flap = 1;
+			break;
+		}
+	}
+	return flap;
+}
+
 int searchThroughChains(const Chain * chains, size_t chainsSize, ulong index)
 {
 	int left = 0;
@@ -750,35 +786,59 @@ void searchAndRebuildPerThread(const uint beginPos, const uint endPos, const Dec
 		ulong index = hostDecryptedInfo[i].index;
 		int pos = searchThroughChains(chains, chainsSize, index);
 		if (pos != -1) {
-			//printf("%d\n", pos);
+			printf("%d\n", pos);
 			if (rebuildAndCompare(givenHash, hash, res, chains[pos].indexS, hostDecryptedInfo[i].pos, plainCharSetSize, plainCharSet, plainLength)) {
 				for (int i = 0; i < plainLength;i++) {
 					resultStore[i] = res[i];
 				}
-				putchar(res[0]);
-				putchar(res[1]);
-				putchar(res[2]);
-				putchar(res[3]);
-				putchar(res[4]);
-				putchar(res[5]);
-				putchar('\n');
+				//putchar(res[0]);
+				//putchar(res[1]);
+				//putchar(res[2]);
+				//putchar(res[3]);
+				//putchar(res[4]);
+				//putchar(res[5]);
+				//putchar('\n');
 				flag = true;
 				return;
 			}
-			//indexToPlainCPU(index, res, plainLength, plainCharSet, plainCharSetSize);
-			//putchar(res[0]);
-			//putchar(res[1]);
-			//putchar(res[2]);
-			//putchar(res[3]);
-			//putchar(res[4]);
-			//putchar(res[5]);
-			//putchar(res[6]);
-			//putchar('\n');
-			//break;
 		}
 	}
 }
 
+void processCommandInstruction(int argc, const char * argv[], int * passwordLength, char * charSetPath, char * tablePath)
+{
+	sscanf_s(argv[0], "%d", &passwordLength);
+	sscanf_s(argv[1], "%s", charSetPath);
+	sscanf_s(argv[2], "%s", tablePath);
+}
+
+//  ¶þ·Ö²éÕÒ >1  <-1
+int binarySearch(const struct PasswordMapping* mapping, const int CHAINS_SIZE, unsigned char hash[]) {
+	int head = 0;
+	int tail = CHAINS_SIZE - 1;
+	while (head <= tail) {
+		int mid = (head + tail) / 2;
+		if (compareHash_(mapping[mid].hash, hash) == 0) {
+			return (head + tail) / 2;
+		}
+		else if (compareHash_(mapping[mid].hash, hash) == 1) {
+			tail = mid - 1;
+		}
+		else {
+			head = mid + 1;
+		}
+	}
+	return -1;
+}
+
+void hashTransfer(const char * src, unsigned char hash[])
+{
+	sscanf_s(src, "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+		&hash[0], &hash[1], &hash[2], &hash[3], &hash[4], &hash[5], &hash[6], &hash[7],
+		&hash[8], &hash[9], &hash[10], &hash[11], &hash[12], &hash[13], &hash[14], &hash[15],
+		&hash[16], &hash[17], &hash[18], &hash[19], &hash[20], &hash[21], &hash[22], &hash[23],
+		&hash[24], &hash[25], &hash[26], &hash[27], &hash[28], &hash[29], &hash[30], &hash[31]);
+}
 
 //int main() {
 //	//char data[] = "Hello World!";

@@ -6,6 +6,8 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <sstream>
+#include <string>
 
 #define INDEX_SIZE_IN_BYTES 8
 
@@ -16,6 +18,8 @@
 #define EXTRACT_7 0x0001ffffffffffff
 
 using std::thread;
+using std::string;
+using std::stringstream;
 
 std::mutex lock;
 
@@ -37,12 +41,11 @@ __shared__ char plainCharSet[384][95];
 
 //__shared__ unsigned char hashSourceShared[32];
 
-__device__ void indexToPlain(ulong index, size_t plainCharsetSize,
-	size_t plainLength, char* plain)
+__device__ void indexToPlain(ulong index, const uint8_t plainLength,
+	const uint8_t plainCharsetSize, char* plain)
 {
-	char * plainCharSetP = plainCharSet[threadIdx.x];
-	for (size_t i = 0;i < plainLength;i++) {
-		plain[i] = plainCharSetP[index % plainCharsetSize];
+	for (int i = plainLength - 1;i >= 0;i--) {
+		plain[i] = index % plainCharsetSize;
 		index /= plainCharsetSize;
 	}
 }
@@ -52,7 +55,7 @@ __device__ inline ulong reductFinalIndex(ulong index, uint8_t plainLength, uint8
 	ulong res = 0;
 	uint8_t plainIndex[9];
 	for (int l = plainLength - 1; l >= 0; l--) {
-		plainIndex[l] = ((uint8_t)(index & 0x7f)) % plainCharSize;
+		plainIndex[l] = ((uint8_t)(index & 0x7f)) % plainCharSize + 32;
 		index >>= 7;
 	}
 	int j;
@@ -209,7 +212,7 @@ __device__ inline void plainToHashWithInlinePTX(ulong index, const uint8_t lengt
 	}
 }
 
-__device__ inline void plainToHashWithInlinePTX(char* plain, const unsigned int length, unsigned char* res) {
+__device__ inline void plainToHashWithInlinePTX(const char* plain, const uint8_t length, unsigned char* res, const uint8_t charSetSize) {
 	unsigned int bitlen0 = 0;
 	unsigned int bitlen1 = 0;
 	unsigned int stateP[8];
@@ -366,10 +369,10 @@ __device__ inline void plainToHash(ulong index, const uint8_t length, unsigned c
 	unsigned int l;
 
 	for (l = length - 1; l >= 1; l--) {
-		data[l] = (index & 0x7f) % charSetSize;
+		data[l] = (index & 0x7f) % charSetSize + 32;
 		index >>= 7;
 	}
-	data[0] = (index & 0x7f) % charSetSize;
+	data[0] = (index & 0x7f) % charSetSize + 32;
 	l = length;
 
 	stateP[0] = 0x6a09e667;
@@ -625,6 +628,12 @@ __device__ inline ulong hashToIndex(unsigned char* hash, int pos)
 	return (ulong)(((*(hashP) ^ *(hashP + 1) ^ *(hashP + 2) ^ *(hashP + 3)) + pos));
 }
 
+__device__ ulong hashToIndex(unsigned char* hash, int pos, ulong plainSpace)
+{
+	ulong* hashP = (ulong*)hash;
+	return (ulong)(((*(hashP)) + pos)) % plainSpace;
+}
+
 __device__ inline void initSHA256ConstantAndCharSet(const char* srcCharSet, const unsigned int charSetSize)
 {
 	char* plainCharSetP = plainCharSet[threadIdx.x];
@@ -633,7 +642,7 @@ __device__ inline void initSHA256ConstantAndCharSet(const char* srcCharSet, cons
 	}
 }
 
-__global__ void calIndexFromSpecificPos(struct DecryptedInfo* decryptedInfo, unsigned char* hashSource, const unsigned int plainCharSetSize, const uint8_t plainLength, const unsigned int chainLength)
+__global__ void calIndexFromSpecificPos(struct DecryptedInfo* decryptedInfo, unsigned char* hashSource, const uint8_t plainCharSetSize, const uint8_t plainLength, const unsigned int chainLength)
 {
 	uint offset = (blockIdx.x * blockDim.x) + threadIdx.x;
 
@@ -659,21 +668,68 @@ __global__ void calIndexFromSpecificPos(struct DecryptedInfo* decryptedInfo, uns
 	}
 }
 
+//// the paperversion's reductant function
+//__global__ void calIndexFromSpecificPos(struct DecryptedInfo* decryptedInfo, unsigned char* hashSource, 
+//	const uint8_t plainCharSetSize, const uint8_t plainLength, const unsigned int chainLength, ulong plainSpace)
+//{
+//	uint offset = (blockIdx.x * blockDim.x) + threadIdx.x;
+//
+//	//initSHA256ConstantAndCharSet(srcCharSet, plainCharSetSize);
+//
+//	if (offset < chainLength) {
+//		unsigned char hash[32];
+//		char plain[8];
+//		for (int i = 0;i < 32;i++) {
+//			hash[i] = hashSource[i];
+//		}
+//
+//		ulong indexS;
+//		(decryptedInfo + offset)->pos = offset;
+//
+//		for (int j = offset;j < chainLength;j++) {
+//			//	plainToHashWithInlinePTX(indexS, plainLength, hash, plainCharSetSize);
+//			//	//plainToHashWithInlinePTX((char*)&indexS, INDEX_SIZE_IN_BYTES, hash);
+//			indexS = hashToIndex(hash, j, plainSpace);
+//			indexToPlain(indexS, plainLength, plainCharSetSize, plain);
+//			plainToHashWithInlinePTX(plain, plainLength, hash, plainCharSetSize);
+//			//	//indexS = hashToIndexPaperVersion(hash, i, plainCharSetSize);
+//		}
+//		(decryptedInfo + offset)->index = indexS;
+//	}
+//}
+
 void threadTest(int i)
 {
 	printf("%d", i);
 }
 
-int main()
+void crackTableWhilePasswordLengthLowerOrEqualThan3(const struct PasswordMapping* mappings, const uint32_t chainSize, unsigned char hash[])
 {
-	const uint CHAINS_SIZE = 7680000;
+	int pos = binarySearch(mappings, chainSize, hash);
+	if (pos != -1) {
+		printf("%s", mappings[pos].plain);
+	}
+}
 
-	unsigned int chainLength = 100000;
+//int main()
+//{
+//	constexpr uint32_t CHAINS_SIZE = 95 + 95 * 95 + 95 * 95 * 95;
+//	struct PasswordMapping* mappings;
+//	cudaHostAlloc(&mappings, sizeof(struct PasswordMapping) * CHAINS_SIZE, cudaHostAllocDefault);
+//	openTableFile((string("../") + "1-3#" + "ascii-32-95#" + "1").c_str(), mappings, sizeof(struct PasswordMapping), CHAINS_SIZE);
+//
+//	unsigned char hash[32];
+//	hashTransfer("961b6dd3ede3cb8ecbaacbd68de040cd78eb2ed5889130cceb4c49268ea4d506", hash);
+//	crackTableWhilePasswordLengthLowerOrEqualThan3(mappings, CHAINS_SIZE, hash);
+//
+//	return 0;
+//}
+
+void crackTable(const char* tablePath, const char* hashString, const uint32_t CHAINS_SIZE, const uint32_t chainLength, const uint8_t plainLength, const char* charSetPath, const uint8_t plainCharSetSize)
+{
 
 	unsigned char givenHash[32];
-	uint8_t plainLength = 6;
-	//plainToHashCPU("621121", plainLength, givenHash);
-	char plain[9];
+	hashTransfer(hashString, givenHash);
 
 	struct Chain* hostChain;
 	char* hostCharSet;
@@ -682,25 +738,23 @@ int main()
 	char* deviceCharSet;
 	unsigned char* deviceGivenHash;
 
-	unsigned int plainCharSetSize = 95;
-	//ulong indexS = hashToIndexCPU(givenHash, chainLength, plainSpaceTotal);
-
-	uint threadPerBlock = 384;
-	uint blockNum = chainLength / threadPerBlock + 1;
+	uint32_t threadPerBlock = 384;
+	uint32_t blockNum = chainLength / threadPerBlock + 1;
 
 	CUDA_CALL(cudaHostAlloc(&hostChain, CHAINS_SIZE * sizeof(struct Chain), cudaHostAllocDefault));
 	CUDA_CALL(cudaHostAlloc(&hostCharSet, plainCharSetSize * sizeof(char), cudaHostAllocDefault));
 	CUDA_CALL(cudaHostAlloc(&hostDecryptedInfo, sizeof(struct DecryptedInfo) * (chainLength), cudaHostAllocDefault));
 
 	getCharSet(hostCharSet, "../charsets/ascii-32-95.txt", plainCharSetSize);
-	
+
 	std::map<const char, size_t> charMap;
 
 	for (int i = 0;i < plainCharSetSize;i++) {
-		charMap.insert(std::make_pair<>(hostCharSet[i],i));
+		charMap.insert(std::make_pair<>(hostCharSet[i], i));
 	}
-	ulong plainIndex = plainToIndexCPU("62qq41", plainLength, hostCharSet, plainCharSetSize, &charMap);
-	plainToHashCPU(plainIndex, plainLength, givenHash, plainCharSetSize);
+
+	//ulong plainIndex = plainToIndexCPU("abcd", plainLength, hostCharSet, plainCharSetSize, &charMap);
+	//plainToHashCPU(plainIndex, plainLength, givenHash, plainCharSetSize);
 
 	CUDA_CALL(cudaMalloc(&deviceCharSet, plainCharSetSize * sizeof(char)));
 	CUDA_CALL(cudaMalloc(&deviceGivenHash, 32 * sizeof(unsigned char)));
@@ -708,7 +762,7 @@ int main()
 	CUDA_CALL(cudaMemcpy(deviceCharSet, hostCharSet, plainCharSetSize * sizeof(char), cudaMemcpyHostToDevice));
 	CUDA_CALL(cudaMemcpy(deviceGivenHash, givenHash, 32 * sizeof(unsigned char), cudaMemcpyHostToDevice));
 
-	openTableFile("../t5.rt", hostChain, sizeof(struct Chain), CHAINS_SIZE);
+	openTableFile(tablePath, hostChain, sizeof(struct Chain), CHAINS_SIZE);
 
 	CUDA_CALL(cudaMalloc(&deviceDecryptedInfo, sizeof(struct DecryptedInfo) * (chainLength)));
 
@@ -733,14 +787,13 @@ int main()
 	//printf("%llx\n", hostDecryptedInfo[chainLength-1].pos);
 
 	uint cpuThreadNum = 4;
-	std::mutex;
+	//std::mutex;
 	uint beg = 0;
 	uint gap = chainLength / cpuThreadNum;
 
-	char resultStore[4][9] = {' '};
-
+	char resultStore[4][9] = { ' ' };
 	for (int i = 0;i < cpuThreadNum;i++) {
-		std::thread t(searchAndRebuildPerThread, beg, beg + gap, hostDecryptedInfo, hostChain, CHAINS_SIZE, givenHash, plainCharSetSize, hostCharSet, plainLength,resultStore[i]);
+		std::thread t(searchAndRebuildPerThread, beg, beg + gap, hostDecryptedInfo, hostChain, CHAINS_SIZE, givenHash, plainCharSetSize, hostCharSet, plainLength, resultStore[i]);
 		beg += gap;
 		t.join();
 	}
@@ -753,41 +806,143 @@ int main()
 		}
 		putchar('\n');
 	}
-	// thread0 : hostDecryptedInfo 0~1/4
-	//for (int i = 0;i < chainLength;i++) {
-	//	int pos = searchThroughChains(hostChain, CHAINS_SIZE, hostDecryptedInfo[i].index);
+}
 
-	//	if (pos != -1) {
-	//		if (rebuildAndCompare(res, givenHash, hostChain[pos].indexS, pos, plainCharSetSize, hostCharSet, plainLength)) {
-	//			putchar(res[0]);
-	//			putchar(res[1]);
-	//			putchar(res[2]);
-	//			putchar(res[3]);
-	//			putchar(res[4]);
-	//			putchar(res[5]);
-	//			putchar(res[6]);
-	//			putchar(res[7]);
-	//			putchar(res[8]);
-	//			break;
-	//		}
-	//	}
-	//}
-
-
-
-	//cudaFree(deviceDecryptedInfo);
-	//cudaFreeHost(hostChain);
-	//cudaFreeHost(hostCharSet);
-	//cudaFreeHost(hostDecryptedInfo);
-
-	/*std::vector<thread> searchThreads;
-	for (int i = 0;i < 4;i++) {
-	thread t(threadTest, i);
-	searchThreads.push_back(std::move(t));
-	}
-	for (int i = 0;i < 4;i++) {
-	searchThreads[i].join();
-	}*/
-
+int main()
+{
+	// plainLength == 4's setting
+	uint32_t CHAINS_SIZE = 165207;
+	uint32_t chainLength = 350; 
+	uint8_t plainLength = 4;
+	uint8_t plainCharSetSize = 95;
+	crackTable("../4#ascii-32-95#1#165207#350" ,"ab0f389a1036dc4ae795bc36f961961138d06776d1d0850772b4154c4cde4f18", CHAINS_SIZE, chainLength, plainLength, "../charsets/ascii-32-95.txt", plainCharSetSize);
 	return 0;
 }
+
+//int main()
+//{
+//	const uint CHAINS_SIZE = 7680000;
+//
+//	unsigned int chainLength = 100000;
+//
+//	unsigned char givenHash[32];
+//	uint8_t plainLength = 6;
+//	//plainToHashCPU("621121", plainLength, givenHash);
+//	char plain[9];
+//
+//	struct Chain* hostChain;
+//	char* hostCharSet;
+//	struct DecryptedInfo* hostDecryptedInfo;
+//	struct DecryptedInfo* deviceDecryptedInfo;
+//	char* deviceCharSet;
+//	unsigned char* deviceGivenHash;
+//
+//	unsigned int plainCharSetSize = 95;
+//	//ulong indexS = hashToIndexCPU(givenHash, chainLength, plainSpaceTotal);
+//
+//	uint threadPerBlock = 384;
+//	uint blockNum = chainLength / threadPerBlock + 1;
+//
+//	CUDA_CALL(cudaHostAlloc(&hostChain, CHAINS_SIZE * sizeof(struct Chain), cudaHostAllocDefault));
+//	CUDA_CALL(cudaHostAlloc(&hostCharSet, plainCharSetSize * sizeof(char), cudaHostAllocDefault));
+//	CUDA_CALL(cudaHostAlloc(&hostDecryptedInfo, sizeof(struct DecryptedInfo) * (chainLength), cudaHostAllocDefault));
+//
+//	getCharSet(hostCharSet, "../charsets/ascii-32-95.txt", plainCharSetSize);
+//	
+//	std::map<const char, size_t> charMap;
+//
+//	for (int i = 0;i < plainCharSetSize;i++) {
+//		charMap.insert(std::make_pair<>(hostCharSet[i],i));
+//	}
+//	ulong plainIndex = plainToIndexCPU("62qq41", plainLength, hostCharSet, plainCharSetSize, &charMap);
+//	plainToHashCPU(plainIndex, plainLength, givenHash, plainCharSetSize);
+//
+//	CUDA_CALL(cudaMalloc(&deviceCharSet, plainCharSetSize * sizeof(char)));
+//	CUDA_CALL(cudaMalloc(&deviceGivenHash, 32 * sizeof(unsigned char)));
+//
+//	CUDA_CALL(cudaMemcpy(deviceCharSet, hostCharSet, plainCharSetSize * sizeof(char), cudaMemcpyHostToDevice));
+//	CUDA_CALL(cudaMemcpy(deviceGivenHash, givenHash, 32 * sizeof(unsigned char), cudaMemcpyHostToDevice));
+//
+//	openTableFile("../t5.rt", hostChain, sizeof(struct Chain), CHAINS_SIZE);
+//
+//	CUDA_CALL(cudaMalloc(&deviceDecryptedInfo, sizeof(struct DecryptedInfo) * (chainLength)));
+//
+//	cudaEvent_t startEvent;
+//	cudaEvent_t endEvent;
+//	float cudaElapsedTime = 0.0f;
+//	cudaEventCreate(&startEvent);
+//	cudaEventCreate(&endEvent);
+//	cudaEventRecord(startEvent, 0);
+//
+//	calIndexFromSpecificPos << <blockNum, threadPerBlock >> >(deviceDecryptedInfo, deviceGivenHash, plainCharSetSize, plainLength, chainLength);
+//
+//	cudaEventRecord(endEvent, 0);
+//	cudaEventSynchronize(endEvent);
+//	cudaEventElapsedTime(&cudaElapsedTime, startEvent, endEvent);
+//
+//	CUDA_CALL(cudaMemcpy(hostDecryptedInfo, deviceDecryptedInfo, sizeof(struct DecryptedInfo) * (chainLength), cudaMemcpyDeviceToHost));
+//
+//	printf("%f\n", cudaElapsedTime);
+//
+//	//char res[9];
+//	//printf("%llx\n", hostDecryptedInfo[chainLength-1].pos);
+//
+//	uint cpuThreadNum = 4;
+//	std::mutex;
+//	uint beg = 0;
+//	uint gap = chainLength / cpuThreadNum;
+//
+//	char resultStore[4][9] = {' '};
+//
+//	for (int i = 0;i < cpuThreadNum;i++) {
+//		std::thread t(searchAndRebuildPerThread, beg, beg + gap, hostDecryptedInfo, hostChain, CHAINS_SIZE, givenHash, plainCharSetSize, hostCharSet, plainLength,resultStore[i]);
+//		beg += gap;
+//		t.join();
+//	}
+//
+//	printf("----------\n");
+//
+//	for (int i = 0;i < cpuThreadNum;i++) {
+//		for (int j = 0;j < plainLength;j++) {
+//			putchar(resultStore[i][j]);
+//		}
+//		putchar('\n');
+//	}
+//	// thread0 : hostDecryptedInfo 0~1/4
+//	//for (int i = 0;i < chainLength;i++) {
+//	//	int pos = searchThroughChains(hostChain, CHAINS_SIZE, hostDecryptedInfo[i].index);
+//
+//	//	if (pos != -1) {
+//	//		if (rebuildAndCompare(res, givenHash, hostChain[pos].indexS, pos, plainCharSetSize, hostCharSet, plainLength)) {
+//	//			putchar(res[0]);
+//	//			putchar(res[1]);
+//	//			putchar(res[2]);
+//	//			putchar(res[3]);
+//	//			putchar(res[4]);
+//	//			putchar(res[5]);
+//	//			putchar(res[6]);
+//	//			putchar(res[7]);
+//	//			putchar(res[8]);
+//	//			break;
+//	//		}
+//	//	}
+//	//}
+//
+//
+//
+//	//cudaFree(deviceDecryptedInfo);
+//	//cudaFreeHost(hostChain);
+//	//cudaFreeHost(hostCharSet);
+//	//cudaFreeHost(hostDecryptedInfo);
+//
+//	/*std::vector<thread> searchThreads;
+//	for (int i = 0;i < 4;i++) {
+//	thread t(threadTest, i);
+//	searchThreads.push_back(std::move(t));
+//	}
+//	for (int i = 0;i < 4;i++) {
+//	searchThreads[i].join();
+//	}*/
+//
+//	return 0;
+//}

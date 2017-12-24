@@ -1,0 +1,67 @@
+﻿  test.cpp
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 1 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 2 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 3 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 4 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 5 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 6 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 7 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 8 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 9 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 10 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 11 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 12 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 13 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 14 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 15 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 16 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 17 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 18 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 19 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 20 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 21 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 22 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 23 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 24 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 25 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 26 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 27 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 28 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 29 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 30 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 31 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+h:\code\cuda\kernelv3\test\test.cpp(7): warning C4477: “sscanf_s”: 格式字符串“%02x”需要类型“unsigned int *”的参数，但可变参数 32 拥有了类型“unsigned char *”
+  h:\code\cuda\kernelv3\test\test.cpp(7): note: 请考虑在格式字符串中使用“%hhx”
+  test.vcxproj -> H:\code\cuda\kernelV3\x64\Debug\test.exe
+  test.vcxproj -> H:\code\cuda\kernelV3\x64\Debug\test.pdb (Partial PDB)

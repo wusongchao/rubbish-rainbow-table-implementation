@@ -267,6 +267,32 @@ void generateInitialIndex(struct Chain* chains, size_t chainsSize) {
 	}
 }
 
+void generateInitialIndex(struct PasswordMapping * chains, const char* plainCharSet, const uint8_t plainCharSetSize)
+{
+	int counter = 0;
+	for (int i = 0;i < plainCharSetSize;i++) {
+		chains[counter].plain[1] = '\0';
+		chains[counter++].plain[0] = plainCharSet[i];
+	}
+	for (int i = 0;i < plainCharSetSize;i++) {
+		for (int j = 0;j < plainCharSetSize;j++) {
+			chains[counter].plain[2] = '\0';
+			chains[counter].plain[1] = plainCharSet[j];
+			chains[counter++].plain[0] = plainCharSet[i];
+		}
+	}
+	for (int i = 0;i < plainCharSetSize;i++) {
+		for (int j = 0;j < plainCharSetSize;j++) {
+			for (int k = 0;k < plainCharSetSize;k++) {
+				chains[counter].plain[3] = '\0';
+				chains[counter].plain[2] = plainCharSet[k];
+				chains[counter].plain[1] = plainCharSet[j];
+				chains[counter++].plain[0] = plainCharSet[i];
+			}
+		}
+	}
+}
+
 void openTableFile(const char * filePath, void * buffer, size_t elementSize, size_t elementCount)
 {
 	FILE* fp;
@@ -278,7 +304,74 @@ void openTableFile(const char * filePath, void * buffer, size_t elementSize, siz
 	fread(buffer, elementSize, elementCount, fp);
 }
 
+void hashTransfer(const char * src, unsigned char hash[])
+{
+	sscanf_s(src, "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+		&hash[0], &hash[1], &hash[2], &hash[3], &hash[4], &hash[5], &hash[6], &hash[7],
+		&hash[8], &hash[9], &hash[10], &hash[11], &hash[12], &hash[13], &hash[14], &hash[15],
+		&hash[16], &hash[17], &hash[18], &hash[19], &hash[20], &hash[21], &hash[22], &hash[23],
+		&hash[24], &hash[25], &hash[26], &hash[27], &hash[28], &hash[29], &hash[30], &hash[31]);
+}
 
+// plainLength#charSet#table#tableLength#chainLength
+string fileNameBuilder(const char * parentPath, const uint32_t plainLength, const char * plainCharSetPath, const uint32_t tableIndex, const uint32_t chainSize, const uint32_t chainLength)
+{
+	stringstream res;
+	res << parentPath
+		<< plainLength
+		<< '#'
+		<< "ascii-32-95"
+		<< '#'
+		<< tableIndex
+		<< '#'
+		<< chainSize
+		<< '#'
+		<< chainLength;
+	return res.str();
+}
+
+uint32_t removeDuplicate(struct Chain* dest, struct Chain* src, uint32_t chainsSize) {
+	uint32_t k = 0;
+	dest[1] = src[1];
+	for (int i = 2; i < chainsSize; i++) {
+		if (src[i].indexE != src[i - 1].indexE) {
+			dest[++k] = src[i];
+		}
+	}
+	return k;
+}
+
+//void processCommandInstructionBeforeGeneration(int argc, const char * argv[], int * passwordLength, char * charSetPath, char * tablePath,
+//	size_t * tableLength, int* chainLength)
+//{
+//	sscanf_s(argv[0], "%d", passwordLength);
+//	sscanf_s(argv[1], "%s", charSetPath);
+//	sscanf_s(argv[2], "%s", tablePath);
+//	sscanf_s(argv[3], "%d", tableLength);
+//	sscanf_s(argv[4], "%d", chainLength);
+//}
+
+//int compareHash(const unsigned char * lhs, const unsigned char * rhs)
+//{
+//	const ulong* lhsP = (const ulong *)lhs;
+//	const ulong* rhsP = (const ulong *)rhs;
+//	/*
+//	*(rhsP + 1 2 3 )
+//	*/
+//	if (*lhsP == *rhsP
+//		&& *(lhsP + 1) == *(rhsP + 1)
+//		&& *(lhsP + 2) == *(rhsP + 2)
+//		&& *(lhsP + 3) == *(rhsP + 3)) {
+//		return 0;
+//	}
+//	if (*lhsP > *rhsP
+//		|| *lhsP == *rhsP && *(lhsP + 1) > *(rhsP + 1)
+//		|| *lhsP == *rhsP && *(lhsP + 1) == *(rhsP + 1) && *(lhsP + 2) > *(rhsP + 2)
+//		|| *lhsP == *rhsP && *(lhsP + 1) == *(rhsP + 1) && *(lhsP + 2) == *(rhsP + 2) && *(lhsP + 3) > *(rhsP + 3)) {
+//		return 1;
+//	}
+//	return -1;
+//}
 
 //int main() {
 //	//char data[] = "Hello World!";

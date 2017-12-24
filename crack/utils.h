@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
@@ -79,6 +81,11 @@ __declspec(align(16)) struct Chain {
 __declspec(align(16)) struct DecryptedInfo{
 	int pos;
 	ulong index;
+};
+
+struct PasswordMapping {
+	char plain[4];
+	unsigned char hash[32];
 };
 
 //inline void mySHA256Implement(char * str, size_t length, unsigned char * res);
@@ -198,8 +205,18 @@ void openTableFile(const char* filePath, void* buffer, size_t elementSize, size_
 
 bool compareHash(const unsigned char* givenHash, const unsigned char* calHash);
 
+int compareHash_(const unsigned char* lhs, const unsigned char* rhs);
+
+int searchThroughChains(const struct Chain* chains, size_t chainsSize, ulong index);
+
 int searchThroughChains(const struct Chain* chains, size_t chainsSize, ulong index);
 
 bool rebuildAndCompare(unsigned char* givenHash, unsigned char* hash, char* plain, ulong indexS, int pos, uint plainCharSetSize, const char * plainCharSet, uint8_t plainLength);
 
 void searchAndRebuildPerThread(const uint beginPos, const uint endPos, const DecryptedInfo* hostDecryptedInfo, const Chain * chains, const size_t chainsSize, unsigned char * givenHash, const uint plainCharSetSize, const char * plainCharSet, const uint8_t plainLength, char* resultStore);
+
+void processCommandInstruction(int argc, const char *argv[], int* passwordLength, char* charSetPath, char* tablePath);
+
+int binarySearch(const struct PasswordMapping* mapping, const int CHAINS_SIZE, unsigned char hash[]);
+
+void hashTransfer(const char* src, unsigned char hash[]);
