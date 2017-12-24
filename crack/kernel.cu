@@ -703,12 +703,15 @@ void threadTest(int i)
 	printf("%d", i);
 }
 
-void crackTableWhilePasswordLengthLowerOrEqualThan3(const struct PasswordMapping* mappings, const uint32_t chainSize, unsigned char hash[])
+int crackTableWhilePasswordLengthLowerOrEqualThan3(const struct PasswordMapping* mappings, const uint32_t chainSize, unsigned char hash[])
 {
-	int pos = binarySearch(mappings, chainSize, hash);
-	if (pos != -1) {
-		printf("%s", mappings[pos].plain);
+	for (int i = 0;i < chainSize;i++) {
+		if (compareHash(mappings[i].hash, hash) == true) {
+			return i;
+		}
 	}
+	return -1;
+	//return binarySearch(mappings, chainSize, hash);
 }
 
 //int main()
@@ -725,12 +728,8 @@ void crackTableWhilePasswordLengthLowerOrEqualThan3(const struct PasswordMapping
 //	return 0;
 //}
 
-void crackTable(const char* tablePath, const char* hashString, const uint32_t CHAINS_SIZE, const uint32_t chainLength, const uint8_t plainLength, const char* charSetPath, const uint8_t plainCharSetSize)
+void crackTable(const char* tablePath, unsigned char givenHash[], const uint32_t CHAINS_SIZE, const uint32_t chainLength, const uint8_t plainLength, const char* charSetPath, const uint8_t plainCharSetSize)
 {
-
-	unsigned char givenHash[32];
-	hashTransfer(hashString, givenHash);
-
 	struct Chain* hostChain;
 	char* hostCharSet;
 	struct DecryptedInfo* hostDecryptedInfo;
@@ -808,14 +807,49 @@ void crackTable(const char* tablePath, const char* hashString, const uint32_t CH
 	}
 }
 
+void crack(const char* hashString)
+{
+	constexpr uint32_t MAPPING_SIZE = 95 + 95 * 95 + 95 * 95 * 95;
+	struct PasswordMapping* mappings;
+	cudaHostAlloc(&mappings, sizeof(struct PasswordMapping) * MAPPING_SIZE, cudaHostAllocDefault);
+	openTableFile((string("../") + "1-3#" + "ascii-32-95#" + "1").c_str(), mappings, sizeof(struct PasswordMapping), MAPPING_SIZE);
+
+	unsigned char hash[32];
+	hashTransfer(hashString, hash);
+
+	int pos;
+	if ((pos = crackTableWhilePasswordLengthLowerOrEqualThan3(mappings, MAPPING_SIZE, hash)) != -1) {
+		printf("%s", mappings[pos].plain);
+	}else {
+		uint32_t CHAINS_SIZE = 165207;
+		uint32_t chainLength = 350;
+		uint8_t plainLength = 4;
+		uint8_t plainCharSetSize = 95;
+		crackTable("../4#ascii-32-95#1#165207#350", hash, CHAINS_SIZE, chainLength, plainLength, "../charsets/ascii-32-95.txt", plainCharSetSize);
+	}
+}
+
 int main()
 {
-	// plainLength == 4's setting
-	uint32_t CHAINS_SIZE = 165207;
-	uint32_t chainLength = 350; 
-	uint8_t plainLength = 4;
-	uint8_t plainCharSetSize = 95;
-	crackTable("../4#ascii-32-95#1#165207#350" ,"ab0f389a1036dc4ae795bc36f961961138d06776d1d0850772b4154c4cde4f18", CHAINS_SIZE, chainLength, plainLength, "../charsets/ascii-32-95.txt", plainCharSetSize);
+	//// plainLength == 4's setting
+	//uint32_t CHAINS_SIZE = 165207;
+	//uint32_t chainLength = 350; 
+	//uint8_t plainLength = 4;
+	//uint8_t plainCharSetSize = 95;
+
+	//constexpr uint32_t MAPPING_SIZE = 95 + 95 * 95 + 95 * 95 * 95;
+	//struct PasswordMapping* mappings;
+	//cudaHostAlloc(&mappings, sizeof(struct PasswordMapping) * MAPPING_SIZE, cudaHostAllocDefault);
+	//openTableFile((string("../") + "1-3#" + "ascii-32-95#" + "1").c_str(), mappings, sizeof(struct PasswordMapping), MAPPING_SIZE);
+	//
+	//unsigned char hash[32];
+	//hashTransfer("961b6dd3ede3cb8ecbaacbd68de040cd78eb2ed5889130cceb4c49268ea4d506", hash);
+	//crackTableWhilePasswordLengthLowerOrEqualThan3(mappings, CHAINS_SIZE, hash);
+
+	//crackTable("../4#ascii-32-95#1#165207#350" ,"b7a76fa07de0ae07516a177f998b8a128d1d9838ce9b33a6136bae06a6eb2c07", CHAINS_SIZE, chainLength, plainLength, "../charsets/ascii-32-95.txt", plainCharSetSize);
+	
+	crack("84e73dc50f2be9000ab2a87f8026c1f45e1fec954af502e9904031645b190d4f");
+
 	return 0;
 }
 

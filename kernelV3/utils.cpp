@@ -92,7 +92,11 @@ void PrintHash(uchar* Hash)
 //	}*/
 //}
 //
-
+//void CChainWalkContext::PlainToHash()
+//{
+//	m_pHashRoutine(m_Plain, m_nPlainLen, m_Hash);
+//}
+//
 //void CChainWalkContext::HashToIndex(int nPos)
 //{
 //	m_nIndex = (uint64)(*(uint64*)m_Hash + m_nReduceOffset + nPos) % m_nPlainSpaceTotal;

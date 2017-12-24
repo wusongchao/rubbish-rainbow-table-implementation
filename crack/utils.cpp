@@ -786,7 +786,7 @@ void searchAndRebuildPerThread(const uint beginPos, const uint endPos, const Dec
 		ulong index = hostDecryptedInfo[i].index;
 		int pos = searchThroughChains(chains, chainsSize, index);
 		if (pos != -1) {
-			printf("%d\n", pos);
+			//printf("%d\n", pos);
 			if (rebuildAndCompare(givenHash, hash, res, chains[pos].indexS, hostDecryptedInfo[i].pos, plainCharSetSize, plainCharSet, plainLength)) {
 				for (int i = 0; i < plainLength;i++) {
 					resultStore[i] = res[i];
